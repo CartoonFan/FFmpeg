@@ -103,7 +103,13 @@ class TFConverter:
             "MathBinary": 5,
             "MathUnary": 6,
         }
-        self.mathbin2code = {"Sub": 0, "Add": 1, "Mul": 2, "RealDiv": 3, "Minimum": 4}
+        self.mathbin2code = {
+            "Sub": 0,
+            "Add": 1,
+            "Mul": 2,
+            "RealDiv": 3,
+            "Minimum": 4
+        }
         self.mathun2code = {"Abs": 0}
         self.mirrorpad_mode = {"CONSTANT": 0, "REFLECT": 1, "SYMMETRIC": 2}
         self.name_operand_dict = {}
@@ -161,19 +167,15 @@ class TFConverter:
 
         if dnode is not None:
             dilation = struct.unpack(
-                "i", dnode.attr["value"].tensor.tensor_content[0:4]
-            )[0]
+                "i", dnode.attr["value"].tensor.tensor_content[0:4])[0]
         else:
             dilation = 1
 
         activation = anode.op if anode is not None else "None"
         padding = node.attr["padding"].s.decode("utf-8")
         # conv2d with dilation > 1 generates tens of nodes, not easy to parse them, so use this tricky method.
-        if (
-            dilation > 1
-            and scope_name + "/stack" in self.name_node_dict
-            and self.name_node_dict[scope_name + "/stack"].op == "Const"
-        ):
+        if (dilation > 1 and scope_name + "/stack" in self.name_node_dict
+                and self.name_node_dict[scope_name + "/stack"].op == "Const"):
             padding = "SAME"
         padding = self.conv_paddings[padding]
 
@@ -183,7 +185,8 @@ class TFConverter:
         in_channels = ktensor.tensor_shape.dim[2].size
         out_channels = ktensor.tensor_shape.dim[3].size
         kernel = np.frombuffer(ktensor.tensor_content, dtype=np.float32)
-        kernel = kernel.reshape(filter_height, filter_width, in_channels, out_channels)
+        kernel = kernel.reshape(filter_height, filter_width, in_channels,
+                                out_channels)
         kernel = np.transpose(kernel, [3, 0, 1, 2])
 
         has_bias = 1
@@ -210,15 +213,17 @@ class TFConverter:
         f.write(bias)
 
         input_name = self.conv2d_scopename_inputname_dict[scope_name]
-        input_operand_index = self.add_operand(input_name, Operand.IOTYPE_INPUT)
+        input_operand_index = self.add_operand(input_name,
+                                               Operand.IOTYPE_INPUT)
 
         if anode is not None:
-            output_operand_index = self.add_operand(anode.name, Operand.IOTYPE_OUTPUT)
+            output_operand_index = self.add_operand(anode.name,
+                                                    Operand.IOTYPE_OUTPUT)
         else:
             output_operand_index = self.add_operand(
-                self.edges[bnode.name][0].name, Operand.IOTYPE_OUTPUT
-            )
-        np.array([input_operand_index, output_operand_index], dtype=np.uint32).tofile(f)
+                self.edges[bnode.name][0].name, Operand.IOTYPE_OUTPUT)
+        np.array([input_operand_index, output_operand_index],
+                 dtype=np.uint32).tofile(f)
 
     def dump_simple_conv2d_to_file(self, node, f):
         assert node.op == "Conv2D"
@@ -243,7 +248,8 @@ class TFConverter:
             kernel = np.float32(ktensor.float_val[0])
         else:
             kernel = np.frombuffer(ktensor.tensor_content, dtype=np.float32)
-        kernel = kernel.reshape(filter_height, filter_width, in_channels, out_channels)
+        kernel = kernel.reshape(filter_height, filter_width, in_channels,
+                                out_channels)
         kernel = np.transpose(kernel, [3, 0, 1, 2])
 
         has_bias = 0
@@ -264,19 +270,26 @@ class TFConverter:
         ).tofile(f)
         kernel.tofile(f)
 
-        input_operand_index = self.add_operand(input_name, Operand.IOTYPE_INPUT)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
-        np.array([input_operand_index, output_operand_index], dtype=np.uint32).tofile(f)
+        input_operand_index = self.add_operand(input_name,
+                                               Operand.IOTYPE_INPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
+        np.array([input_operand_index, output_operand_index],
+                 dtype=np.uint32).tofile(f)
 
     def dump_depth2space_to_file(self, node, f):
         assert node.op == "DepthToSpace"
         self.layer_number = self.layer_number + 1
         block_size = node.attr["block_size"].i
-        np.array([self.op2code[node.op], block_size], dtype=np.uint32).tofile(f)
+        np.array([self.op2code[node.op], block_size],
+                 dtype=np.uint32).tofile(f)
         self.converted_nodes.add(node.name)
-        input_operand_index = self.add_operand(node.input[0], Operand.IOTYPE_INPUT)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
-        np.array([input_operand_index, output_operand_index], dtype=np.uint32).tofile(f)
+        input_operand_index = self.add_operand(node.input[0],
+                                               Operand.IOTYPE_INPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
+        np.array([input_operand_index, output_operand_index],
+                 dtype=np.uint32).tofile(f)
 
     def dump_mirrorpad_to_file(self, node, f):
         assert node.op == "MirrorPad"
@@ -289,9 +302,12 @@ class TFConverter:
         paddings = pnode.attr["value"].tensor.tensor_content
         f.write(paddings)
         self.converted_nodes.add(node.name)
-        input_operand_index = self.add_operand(node.input[0], Operand.IOTYPE_INPUT)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
-        np.array([input_operand_index, output_operand_index], dtype=np.uint32).tofile(f)
+        input_operand_index = self.add_operand(node.input[0],
+                                               Operand.IOTYPE_INPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
+        np.array([input_operand_index, output_operand_index],
+                 dtype=np.uint32).tofile(f)
 
     def dump_maximum_to_file(self, node, f):
         assert node.op == "Maximum"
@@ -301,52 +317,60 @@ class TFConverter:
         np.array([self.op2code[node.op]], dtype=np.uint32).tofile(f)
         np.array([y], dtype=np.float32).tofile(f)
         self.converted_nodes.add(node.name)
-        input_operand_index = self.add_operand(node.input[0], Operand.IOTYPE_INPUT)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
-        np.array([input_operand_index, output_operand_index], dtype=np.uint32).tofile(f)
+        input_operand_index = self.add_operand(node.input[0],
+                                               Operand.IOTYPE_INPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
+        np.array([input_operand_index, output_operand_index],
+                 dtype=np.uint32).tofile(f)
 
     def dump_mathbinary_to_file(self, node, f):
         self.layer_number = self.layer_number + 1
         self.converted_nodes.add(node.name)
         i0_node = self.name_node_dict[node.input[0]]
         i1_node = self.name_node_dict[node.input[1]]
-        np.array(
-            [self.op2code["MathBinary"], self.mathbin2code[node.op]], dtype=np.uint32
-        ).tofile(f)
+        np.array([self.op2code["MathBinary"], self.mathbin2code[node.op]],
+                 dtype=np.uint32).tofile(f)
         if i0_node.op == "Const":
             scalar = i0_node.attr["value"].tensor.float_val[0]
             np.array([1], dtype=np.uint32).tofile(f)  # broadcast: 1
             np.array([scalar], dtype=np.float32).tofile(f)
             np.array([0], dtype=np.uint32).tofile(f)  # broadcast: 0
-            input_operand_index = self.add_operand(i1_node.name, Operand.IOTYPE_INPUT)
+            input_operand_index = self.add_operand(i1_node.name,
+                                                   Operand.IOTYPE_INPUT)
             np.array([input_operand_index], dtype=np.uint32).tofile(f)
         elif i1_node.op == "Const":
             scalar = i1_node.attr["value"].tensor.float_val[0]
             np.array([0], dtype=np.uint32).tofile(f)
-            input_operand_index = self.add_operand(i0_node.name, Operand.IOTYPE_INPUT)
+            input_operand_index = self.add_operand(i0_node.name,
+                                                   Operand.IOTYPE_INPUT)
             np.array([input_operand_index], dtype=np.uint32).tofile(f)
             np.array([1], dtype=np.uint32).tofile(f)
             np.array([scalar], dtype=np.float32).tofile(f)
         else:
             np.array([0], dtype=np.uint32).tofile(f)
-            input_operand_index = self.add_operand(i0_node.name, Operand.IOTYPE_INPUT)
+            input_operand_index = self.add_operand(i0_node.name,
+                                                   Operand.IOTYPE_INPUT)
             np.array([input_operand_index], dtype=np.uint32).tofile(f)
             np.array([0], dtype=np.uint32).tofile(f)
-            input_operand_index = self.add_operand(i1_node.name, Operand.IOTYPE_INPUT)
+            input_operand_index = self.add_operand(i1_node.name,
+                                                   Operand.IOTYPE_INPUT)
             np.array([input_operand_index], dtype=np.uint32).tofile(f)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
         np.array([output_operand_index], dtype=np.uint32).tofile(f)
 
     def dump_mathunary_to_file(self, node, f):
         self.layer_number = self.layer_number + 1
         self.converted_nodes.add(node.name)
         i0_node = self.name_node_dict[node.input[0]]
-        np.array(
-            [self.op2code["MathUnary"], self.mathun2code[node.op]], dtype=np.uint32
-        ).tofile(f)
-        input_operand_index = self.add_operand(i0_node.name, Operand.IOTYPE_INPUT)
+        np.array([self.op2code["MathUnary"], self.mathun2code[node.op]],
+                 dtype=np.uint32).tofile(f)
+        input_operand_index = self.add_operand(i0_node.name,
+                                               Operand.IOTYPE_INPUT)
         np.array([input_operand_index], dtype=np.uint32).tofile(f)
-        output_operand_index = self.add_operand(node.name, Operand.IOTYPE_OUTPUT)
+        output_operand_index = self.add_operand(node.name,
+                                                Operand.IOTYPE_OUTPUT)
         np.array([output_operand_index], dtype=np.uint32).tofile(f)
 
     def dump_layers_to_file(self, f):
@@ -377,11 +401,16 @@ class TFConverter:
         operands = sorted(self.name_operand_dict.values())
         for operand in operands:
             # print('{}'.format(operand))
-            np.array([operand.index, len(operand.name)], dtype=np.uint32).tofile(f)
+            np.array([operand.index, len(operand.name)],
+                     dtype=np.uint32).tofile(f)
             f.write(operand.name.encode("utf-8"))
-            np.array([operand.iotype, operand.dtype], dtype=np.uint32).tofile(f)
+            np.array([operand.iotype, operand.dtype],
+                     dtype=np.uint32).tofile(f)
             np.array(
-                [operand.dims[0], operand.dims[1], operand.dims[2], operand.dims[3]],
+                [
+                    operand.dims[0], operand.dims[1], operand.dims[2],
+                    operand.dims[3]
+                ],
                 dtype=np.uint32,
             ).tofile(f)
 
@@ -391,9 +420,9 @@ class TFConverter:
             np.array([header.major, header.minor], dtype=np.uint32).tofile(f)
             self.dump_layers_to_file(f)
             self.dump_operands_to_file(f)
-            np.array(
-                [self.layer_number, len(self.name_operand_dict)], dtype=np.uint32
-            ).tofile(f)
+            np.array([self.layer_number,
+                      len(self.name_operand_dict)],
+                     dtype=np.uint32).tofile(f)
 
     def generate_name_node_dict(self):
         for node in self.nodes:
@@ -475,7 +504,9 @@ class TFConverter:
         # get the input name to the conv2d sub block
         for node in self.nodes:
             scope = TFConverter.get_scope_name(node.name)
-            if scope in self.conv2d_scope_names and node.op in ["Conv2D", "Shape"]:
+            if scope in self.conv2d_scope_names and node.op in [
+                    "Conv2D", "Shape"
+            ]:
                 for inp in node.input:
                     if TFConverter.get_scope_name(inp) != scope:
                         self.conv2d_scopename_inputname_dict[scope] = inp
