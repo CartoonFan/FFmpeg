@@ -136,16 +136,15 @@ class TFConverter:
         else:
             dilation = 1
 
-        if anode is not None:
-            activation = anode.op
-        else:
-            activation = 'None'
-
+        activation = anode.op if anode is not None else 'None'
         padding = node.attr['padding'].s.decode("utf-8")
         # conv2d with dilation > 1 generates tens of nodes, not easy to parse them, so use this tricky method.
-        if dilation > 1 and scope_name + '/stack' in self.name_node_dict:
-            if self.name_node_dict[scope_name + '/stack'].op == "Const":
-                padding = 'SAME'
+        if (
+            dilation > 1
+            and scope_name + '/stack' in self.name_node_dict
+            and self.name_node_dict[scope_name + '/stack'].op == "Const"
+        ):
+            padding = 'SAME'
         padding = self.conv_paddings[padding]
 
         ktensor = knode.attr['value'].tensor
@@ -428,11 +427,10 @@ class TFConverter:
         # get the input name to the conv2d sub block
         for node in self.nodes:
             scope = TFConverter.get_scope_name(node.name)
-            if scope in self.conv2d_scope_names:
-                if node.op == 'Conv2D' or node.op == 'Shape':
-                    for inp in node.input:
-                        if TFConverter.get_scope_name(inp) != scope:
-                            self.conv2d_scopename_inputname_dict[scope] = inp
+            if scope in self.conv2d_scope_names and node.op in ['Conv2D', 'Shape']:
+                for inp in node.input:
+                    if TFConverter.get_scope_name(inp) != scope:
+                        self.conv2d_scopename_inputname_dict[scope] = inp
 
 
     def run(self):
