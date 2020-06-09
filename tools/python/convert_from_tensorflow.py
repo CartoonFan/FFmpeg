@@ -17,11 +17,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 # ==============================================================================
 
-import tensorflow as tf
-import numpy as np
-import sys
 import struct
+import sys
+
 import convert_header as header
+import numpy as np
+import tensorflow as tf
 
 __all__ = ["convert_from_tensorflow"]
 
